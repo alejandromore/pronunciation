@@ -1,0 +1,62 @@
+# ============================================================================
+#  AI Pronunciation Trainer - ECS App (GPU) con EIP directa
+#
+#   trainer : la app (Flask + Whisper) sobre la GPU (Tesla T4). Al ARRANCAR
+#             descarga el CSV de palabras desde OBS via la agency del ECS
+#             (entrypoint). Reiniciar el contenedor/ECS re-descarga la ultima
+#             version del objeto en OBS.
+#   nginx   : reverse proxy que TERMINA TLS (443) en el propio ECS y reenvia
+#             al trainer:3000. 80 -> 301 a 443.
+#
+#  Las variables ${...} se resuelven desde el .env (generado por Ansible).
+# ============================================================================
+
+services:
+
+  # ------------------------------------------------------------- Trainer (GPU)
+  trainer:
+    image: ${SWR_REGISTRY}/pronunciation-trainer:${TRAINER_VERSION}
+    container_name: pronunciation-trainer
+    restart: unless-stopped
+    environment:
+      TZ: America/Lima
+      PYTHONUTF8: "1"
+      # OBS: el entrypoint usa la agency del ECS (creds temporales del metadata)
+      # para descargar el CSV. Si falla, usa el CSV horneado en la imagen.
+      OBS_REGION: ${OBS_REGION}
+      OBS_BUCKET: ${OBS_BUCKET}
+      OBS_CSV_KEY: ${OBS_CSV_KEY}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - pronunciation
+
+  # --------------------------------------------------------------------- Nginx
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx
+    restart: unless-stopped
+    depends_on:
+      - trainer
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TZ: America/Lima
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - pronunciation
+
+networks:
+  pronunciation:
+    driver: bridge
