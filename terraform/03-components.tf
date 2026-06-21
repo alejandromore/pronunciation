@@ -51,10 +51,17 @@ resource "huaweicloud_obs_bucket_object" "data_en" {
 
 #######################################
 # Imagen del ECS app
+#  Se filtra por flavor_id para que SOLO devuelva imagenes compatibles con el
+#  flavor GPU (pi2/T4). Asi se evita el error Ecs.0005 "The flavor does not
+#  match the image" que da una imagen publica generica sin soporte GPU.
+#   - Si ecs_image_name esta vacio -> elige por OS + flavor (recomendado).
+#   - Si ecs_image_name esta seteado -> usa ese nombre (igual filtra por flavor).
 #######################################
 data "huaweicloud_images_image" "app" {
-  name        = var.ecs_image_name
   visibility  = "public"
+  flavor_id   = var.ecs_flavor_app
+  os          = var.ecs_image_name == "" ? var.ecs_image_os : null
+  name        = var.ecs_image_name == "" ? null : var.ecs_image_name
   most_recent = true
 }
 

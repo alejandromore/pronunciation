@@ -75,12 +75,23 @@ variable "ecs_flavor_app" {
   type = string
 }
 
-# Imagen del ECS app. RECOMENDADO: imagen GPU de Huawei con el driver Tesla
-# preinstalado. Si se usa una Ubuntu limpia, el playbook instala el driver.
-variable "ecs_image_name" {
-  description = "Nombre de la imagen publica del ECS app (idealmente GPU con driver Tesla)"
+# OS de la imagen del ECS app. Se COMBINA con flavor_id al buscar la imagen, de
+# modo que Terraform solo elige imagenes COMPATIBLES con el flavor GPU. Esto
+# evita el error Ecs.0005 "The flavor does not match the image" (la imagen
+# publica generica no trae el tag de soporte GPU). Ej: "Ubuntu", "CentOS".
+variable "ecs_image_os" {
+  description = "OS de la imagen publica del ECS app (se filtra junto al flavor GPU)"
   type        = string
-  default     = "Ubuntu 22.04 server 64bit"
+  default     = "Ubuntu"
+}
+
+# (Opcional) Forzar una imagen por NOMBRE exacto. Vacio = elegir por OS+flavor
+# (recomendado para GPU). Util si quieres una imagen GPU especifica del catalogo
+# que ya trae el driver Tesla. Aun asi se aplica el filtro flavor_id.
+variable "ecs_image_name" {
+  description = "Nombre exacto de imagen (opcional; vacio = elegir por OS+flavor)"
+  type        = string
+  default     = ""
 }
 
 variable "key_pair_name" {

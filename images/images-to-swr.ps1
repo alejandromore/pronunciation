@@ -6,10 +6,6 @@
 #
 #  Uso:
 #    .\images-to-swr.ps1 -SwrUser "la-south-2@HST3WARDF7OXIEACWCLV" -SwrPassword "cf6d50dd50ed623380cca26d6fa56047d30606cf1cb404310240963932a52525"
-#docker login 
--u la-south-2@HST3WARDF7OXIEACWCLV 
--p cf6d50dd50ed623380cca26d6fa56047d30606cf1cb404310240963932a52525 
-swr.la-south-2.myhuaweicloud.com
 #  Notas:
 #   - El build baja la base CUDA (pytorch/pytorch) y clona el upstream; necesita
 #     salida a internet durante el build.

@@ -40,8 +40,11 @@ bandwidth_size = 5
 # usa el flavor GPU-T4 mas cercano (g6.*).
 ecs_flavor_app = "pi2.2xlarge.4"
 
-# Idealmente una imagen GPU de Huawei con el driver Tesla preinstalado.
-ecs_image_name = "Ubuntu 22.04 server 64bit"
+# Imagen del ECS app: por defecto se elige por OS + flavor (compatible con GPU,
+# evita el error Ecs.0005). Para forzar una imagen GPU por nombre exacto del
+# catalogo (que ya traiga el driver Tesla), descomenta ecs_image_name.
+ecs_image_os = "Ubuntu"
+# ecs_image_name = "<nombre exacto de la imagen GPU del catalogo>"
 
 cloud_init_config = <<-EOT
   #cloud-config
