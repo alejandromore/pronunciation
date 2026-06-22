@@ -21,11 +21,14 @@ RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 # Ajustes de frontend:
 #  Idioma por defecto = English (en vez de German) y label del boton.
 #  El icono "home" vuelve al SELECTOR de archivos ("/") para cambiar de set.
+#  Subir el volumen del audio de referencia (TTS): el upstream lo atenua al 20%
+#  (linear_factor = 0.2) -> se oye muy bajo. Lo subimos a 0.8.
 #  Para pasar de frase se usa el boton "Next" (arriba a la derecha del recuadro),
 #  que ya viene en el upstream.
 RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default English/' static/javascript/callbacks.js \
     && sed -i 's#>German</button>#>English</button>#' templates/main.html \
-    && sed -i "s#onclick=\"history.go(0)\"#onclick=\"window.location.href='/'\"#" templates/main.html
+    && sed -i "s#onclick=\"history.go(0)\"#onclick=\"window.location.href='/'\"#" templates/main.html \
+    && sed -i 's/linear_factor = 0.2/linear_factor = 0.8/' lambdaTTS.py
 
 # Selector de archivos OBS:
 #  - "/"        lista los .csv del bucket (via agency)
