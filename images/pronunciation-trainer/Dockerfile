@@ -18,6 +18,13 @@ WORKDIR /app
 # Codigo upstream
 RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 
+# Ajustes de frontend:
+#  Idioma por defecto = English (en vez de German) y label del boton.
+#  Para pasar de frase se usa el boton "Next" (arriba a la derecha del recuadro),
+#  que ya viene en el upstream.
+RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default English/' static/javascript/callbacks.js \
+    && sed -i 's#>German</button>#>English</button>#' templates/main.html
+
 # Personalizaciones (GPU + CSV horneado de respaldo)
 COPY whisper_wrapper.py /app/whisper_wrapper.py
 COPY data_en.csv /app/databases/data_en.csv
@@ -33,6 +40,14 @@ RUN sed -i '/^torch/d' requirements.txt \
     && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir "transformers==4.44.2" \
     && pip install --no-cache-dir boto3
+
+# Pre-cargar (HORNEAR) los modelos que la app descarga al ARRANCAR, para que el
+# contenedor NO los baje en cada reinicio. Importar estos modulos ejecuta los
+# mismos loads que el arranque real:
+#   - lambdaTTS        -> silero-models (repo 130MB) + TTS aleman  -> /root/.cache/torch/hub
+#   - lambdaSpeechToScore -> Whisper base (ASR) de HuggingFace      -> /root/.cache/huggingface
+# Best-effort: si HF limita la descarga, el build no falla (se reintenta en runtime).
+RUN python -c "import lambdaTTS, lambdaSpeechToScore" || echo "WARN: warm-up parcial de modelos (se completara en runtime)"
 
 # Entrypoint que refresca el CSV desde OBS y arranca la app
 COPY fetch_csv.py /app/fetch_csv.py
