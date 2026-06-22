@@ -47,6 +47,8 @@ pipeline {
         }
 
         // -- Terraform (deploy o destroy) --
+        //  terraformDeploy deja en el WORKSPACE los .txt de cada output:
+        //  app_public_ip.txt, ecs_private_key.txt, obs_data_bucket.txt, obs_csv_key.txt
         stage('Terraform') {
             when {
                 expression { params.RUN_TERRAFORM }
@@ -64,8 +66,6 @@ pipeline {
                             varsFile: 'terraform.tfvars',
                             project: env.PROJECT,
                             action: params.ACTION,
-                            // El ECS tiene EIP directa (sin bastion). Terraform sube
-                            // el CSV a OBS y el ECS lo lee por agency.
                             outputs: [
                                 'app_public_ip', 'ecs_private_key',
                                 'obs_data_bucket', 'obs_csv_key'
@@ -76,27 +76,10 @@ pipeline {
             }
         }
 
-        // -- Cargar outputs de Terraform --
-        stage('Load Terraform Outputs') {
-            when {
-                expression { params.ACTION == 'deploy' }
-            }
-            steps {
-                script {
-                    env.app_public_ip   = readFile("${WORKSPACE}/app_public_ip.txt").trim()
-                    env.ecs_private_key = "${WORKSPACE}/ecs_private_key.txt"
-                    env.obs_data_bucket = readFile("${WORKSPACE}/obs_data_bucket.txt").trim()
-                    env.obs_csv_key     = readFile("${WORKSPACE}/obs_csv_key.txt").trim()
-
-                    echo "App Public IP:   ${env.app_public_ip}"
-                    echo "OBS data bucket: ${env.obs_data_bucket}"
-                    echo "OBS csv key:     ${env.obs_csv_key}"
-                    echo "App URL (HTTPS): https://${env.app_public_ip}"
-                }
-            }
-        }
-
-        // -- Ansible: desplegar el Pronunciation Trainer (SSH directo a la EIP) --
+        // -- Ansible: desplegar el Pronunciation Trainer --
+        //  Lee los outputs DIRECTAMENTE de los .txt del workspace dentro del mismo
+        //  shell. NO usa variables env.* entre etapas (eso se perdia y llegaba
+        //  app_public_ip vacio -> "hostname contains invalid characters").
         stage('Deploy Pronunciation with Ansible') {
             when {
                 allOf {
@@ -109,35 +92,45 @@ pipeline {
                     withCredentials([
                         usernamePassword(credentialsId: 'swr-jenkins', usernameVariable: 'SWR_USER', passwordVariable: 'SWR_PASS')
                     ]) {
-                        withEnv([
-                            "KEY=${env.ecs_private_key}",
-                            "APP_PUBLIC_IP=${env.app_public_ip}",
-                            "OBS_BUCKET=${env.obs_data_bucket}",
-                            "OBS_CSV_KEY=${env.obs_csv_key}",
-                            "APP_ENV=${params.PROJECT}"
-                        ]) {
-                            sh '''
-                                set -e
-                                chmod 600 "$KEY"
-                                export ANSIBLE_HOST_KEY_CHECKING=False
+                        sh '''
+                            set -e
 
-                                ansible-playbook -i inventory/hosts.yml playbooks/deploy-pronunciation.yml \\
-                                    --private-key "$KEY" \\
-                                    --extra-vars "app_env=$APP_ENV \\
-                                                  app_public_ip=$APP_PUBLIC_IP \\
-                                                  obs_region=$OBS_REGION \\
-                                                  obs_bucket=$OBS_BUCKET \\
-                                                  obs_csv_key=$OBS_CSV_KEY"
+                            # Outputs de Terraform leidos DIRECTO de los .txt del workspace.
+                            # $(cat ...) elimina el salto de linea final por si solo.
+                            KEY="$WORKSPACE/ecs_private_key.txt"
+                            APP_PUBLIC_IP="$(cat "$WORKSPACE/app_public_ip.txt")"
+                            OBS_BUCKET="$(cat "$WORKSPACE/obs_data_bucket.txt")"
+                            OBS_CSV_KEY="$(cat "$WORKSPACE/obs_csv_key.txt")"
 
-                                set +x
-                                echo "============================================================"
-                                echo " Pronunciation Trainer desplegado"
-                                echo " App (HTTPS): https://$APP_PUBLIC_IP"
-                                echo " CSV en OBS:  $OBS_BUCKET/$OBS_CSV_KEY"
-                                echo " (Edita el CSV en OBS y reinicia el ECS para refrescarlo.)"
-                                echo "============================================================"
-                            '''
-                        }
+                            # Fallar claro si la IP esta vacia (en vez del confuso "invalid characters")
+                            if [ -z "$APP_PUBLIC_IP" ]; then
+                                echo "ERROR: app_public_ip vacio. Corre con RUN_TERRAFORM=true y revisa el apply." >&2
+                                exit 1
+                            fi
+                            if [ -z "$OBS_CSV_KEY" ]; then
+                                OBS_CSV_KEY="data_en.csv"
+                            fi
+
+                            chmod 600 "$KEY"
+                            export ANSIBLE_HOST_KEY_CHECKING=False
+
+                            echo "Desplegando en $APP_PUBLIC_IP (bucket: $OBS_BUCKET, csv: $OBS_CSV_KEY)"
+
+                            ansible-playbook -i inventory/hosts.yml playbooks/deploy-pronunciation.yml \\
+                                --private-key "$KEY" \\
+                                --extra-vars "app_env=$PROJECT \\
+                                              app_public_ip=$APP_PUBLIC_IP \\
+                                              obs_region=$OBS_REGION \\
+                                              obs_bucket=$OBS_BUCKET \\
+                                              obs_csv_key=$OBS_CSV_KEY"
+
+                            echo "============================================================"
+                            echo " Pronunciation Trainer desplegado"
+                            echo " App (HTTPS): https://$APP_PUBLIC_IP"
+                            echo " CSV en OBS:  $OBS_BUCKET/$OBS_CSV_KEY"
+                            echo " (Edita el CSV en OBS y reinicia el ECS para refrescarlo.)"
+                            echo "============================================================"
+                        '''
                     }
                 }
             }
@@ -148,8 +141,11 @@ pipeline {
         success {
             script {
                 if (params.ACTION == 'deploy') {
-                    def ip = env.app_public_ip ?: 'N/A'
-                    currentBuild.description = "Deploy OK - Trainer (HTTPS): https://${ip}"
+                    def ip = ''
+                    if (fileExists("${WORKSPACE}/app_public_ip.txt")) {
+                        ip = readFile("${WORKSPACE}/app_public_ip.txt").trim()
+                    }
+                    currentBuild.description = ip ? "Deploy OK - Trainer (HTTPS): https://${ip}" : "Deploy OK"
                 } else {
                     currentBuild.description = "Destruccion completada"
                 }
