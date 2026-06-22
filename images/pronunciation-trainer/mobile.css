@@ -1,0 +1,69 @@
+
+/* =======================================================================
+   Mejoras responsive (movil / pantallas <= 1200px)
+   Anexado al final para ganar en la cascada. Solo afecta pantallas chicas.
+   ======================================================================= */
+@media only screen and (max-width: 1200px) {
+
+    /* --- Texto del card: tamanos legibles y que no se corte --- */
+    .main-text {
+        font-size: 1.5em !important;
+        max-width: 100% !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.25;
+    }
+    .ipa-text {
+        font-size: 1.05em !important;
+        max-width: 100% !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.25;
+    }
+
+    /* --- Card mas alto + scroll interno (no recortar el IPA) --- */
+    .container {
+        top: 19% !important;
+        height: 62% !important;
+        overflow: hidden !important;
+    }
+    .main-text-div {
+        left: 17% !important;
+        right: 5% !important;
+        top: 3% !important;
+        bottom: 3% !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* --- Botones de audio (play / escuchar): mas grandes y centrados --- */
+    .round-button {
+        width: 3em !important;
+        height: 3em !important;
+        font-size: 18px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        left: 0% !important;
+    }
+    .icon-text { font-size: 1.6em !important; }
+
+    /* --- "Reference | Spoken": centrado abajo y full-width, sin tapar nada --- */
+    .container-small {
+        left: 4% !important;
+        right: 4% !important;
+        width: 92% !important;
+        transform: none !important;
+        top: 82.5% !important;
+        height: auto !important;
+        padding: 8px 0 !important;
+    }
+    .ipa-text-small { font-size: 1em !important; }
+
+    /* --- Titulo un poco mas compacto --- */
+    #main_title { font-size: 1.6em !important; }
+
+    /* --- Barra "Next" (lado derecho del card): area de toque comoda --- */
+    #nextButtonDiv { left: 88% !important; }
+}

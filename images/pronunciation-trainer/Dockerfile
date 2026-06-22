@@ -21,14 +21,20 @@ RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 # Ajustes de frontend:
 #  Idioma por defecto = English (en vez de German) y label del boton.
 #  El icono "home" vuelve al SELECTOR de archivos ("/") para cambiar de set.
-#  Subir el volumen del audio de referencia (TTS): el upstream lo atenua al 20%
-#  (linear_factor = 0.2) -> se oye muy bajo. Lo subimos a 0.8.
-#  Para pasar de frase se usa el boton "Next" (arriba a la derecha del recuadro),
-#  que ya viene en el upstream.
+#  Subir el volumen del audio de referencia (TTS): 0.2 -> 0.8.
+#  Voz en MOVIL: las voces TTS cargan async; reintentar al pulsar play y
+#  re-seleccionar voz con onvoiceschanged.
+#  El responsive de movil se aplica con mobile.css (ver mas abajo).
 RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default English/' static/javascript/callbacks.js \
     && sed -i 's#>German</button>#>English</button>#' templates/main.html \
     && sed -i "s#onclick=\"history.go(0)\"#onclick=\"window.location.href='/'\"#" templates/main.html \
-    && sed -i 's/linear_factor = 0.2/linear_factor = 0.8/' lambdaTTS.py
+    && sed -i 's/linear_factor = 0.2/linear_factor = 0.8/' lambdaTTS.py \
+    && sed -i 's#if (languageFound) {#if (!languageFound || voice_synth == null) { try { changeLanguage(AILanguage); } catch (e) {} }\n    if (languageFound) {#' static/javascript/callbacks.js \
+    && printf '\n// Movil: las voces TTS cargan async; re-seleccionar voz al estar listas.\ntry { if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = function(){ try { changeLanguage(AILanguage); } catch(e){} }; } } catch(e){}\n' >> static/javascript/callbacks.js
+
+# Responsive movil: anexar mobile.css al final del CSS del upstream (gana en cascada).
+COPY mobile.css /tmp/mobile.css
+RUN cat /tmp/mobile.css >> static/css/style-new.css
 
 # Selector de archivos OBS:
 #  - "/"        lista los .csv del bucket (via agency)

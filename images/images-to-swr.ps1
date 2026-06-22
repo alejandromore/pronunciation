@@ -5,7 +5,7 @@
 #  Ubicacion esperada del script: images/ (raiz de los contextos de build).
 #
 #  Uso:
-#    .\images-to-swr.ps1 -SwrUser "la-south-2@AK" -SwrPassword "TOKEN"
+#    .\images-to-swr.ps1 -SwrUser "la-south-2@HST3WSYS8PK7HF08UGOR" -SwrPassword "2bf44d9939239df2873ecebd841c0fa81e228832670de5a79d77ef4f25c2e2a9"
 #
 #  Notas:
 #   - El build baja la base CUDA (pytorch/pytorch) y clona el upstream; necesita
