@@ -22,10 +22,16 @@ RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 COPY whisper_wrapper.py /app/whisper_wrapper.py
 COPY data_en.csv /app/databases/data_en.csv
 
-# Mantener el torch CUDA de la base; agregar torchaudio CUDA + deps; boto3 para OBS
+# Mantener el torch CUDA de la base; agregar torchaudio CUDA + deps; boto3 para OBS.
+# IMPORTANTE: fijar transformers a una version compatible con torch 2.3.1. Las
+# versiones nuevas exigen torch >= 2.4 y, si no lo encuentran, DESACTIVAN el
+# backend de PyTorch -> "NameError: name 'torch' is not defined" al crear el
+# pipeline de Whisper. 4.44.2 es la ultima linea que funciona con torch 2.3.x.
 RUN sed -i '/^torch/d' requirements.txt \
+    && sed -i '/^transformers/d' requirements.txt \
     && pip install --no-cache-dir torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121 \
     && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir "transformers==4.44.2" \
     && pip install --no-cache-dir boto3
 
 # Entrypoint que refresca el CSV desde OBS y arranca la app
