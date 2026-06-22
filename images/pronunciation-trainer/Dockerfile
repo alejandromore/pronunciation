@@ -20,10 +20,19 @@ RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 
 # Ajustes de frontend:
 #  Idioma por defecto = English (en vez de German) y label del boton.
+#  El icono "home" vuelve al SELECTOR de archivos ("/") para cambiar de set.
 #  Para pasar de frase se usa el boton "Next" (arriba a la derecha del recuadro),
 #  que ya viene en el upstream.
 RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default English/' static/javascript/callbacks.js \
-    && sed -i 's#>German</button>#>English</button>#' templates/main.html
+    && sed -i 's#>German</button>#>English</button>#' templates/main.html \
+    && sed -i "s#onclick=\"history.go(0)\"#onclick=\"window.location.href='/'\"#" templates/main.html
+
+# Selector de archivos OBS:
+#  - "/"        lista los .csv del bucket (via agency)
+#  - "/select"  descarga el elegido, recarga el dataset y va a "/trainer"
+#  - "/trainer" la app de pronunciacion
+COPY webApp.py /app/webApp.py
+COPY obs_files.py /app/obs_files.py
 
 # Personalizaciones (GPU + CSV horneado de respaldo)
 COPY whisper_wrapper.py /app/whisper_wrapper.py
