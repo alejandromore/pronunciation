@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, abort
+from flask import Flask, render_template, request, redirect, abort, Response
 import webbrowser
 import os
 import html
@@ -24,6 +24,10 @@ rootPath = ''
 
 CSV_DEST = "./databases/data_en.csv"
 
+# Lista activa + indice de imagenes de esa lista (carpeta con el mismo nombre).
+ACTIVE_FOLDER = None
+ACTIVE_IMG_INDEX = {}
+
 
 def _reload_en_dataset():
     """Recarga en memoria el dataset 'en' desde el CSV en disco.
@@ -31,6 +35,29 @@ def _reload_en_dataset():
     hay que reasignar el dataset para que /getSample use las nuevas frases."""
     df = pd.read_csv(CSV_DEST, delimiter=';')
     lambdaGetSample.lambda_database['en'] = lambdaGetSample.TextDataset(df)
+
+
+def _set_active_folder(csv_key):
+    """Define la lista activa y construye el indice de imagenes de su carpeta.
+    Carpeta esperada = nombre del .csv sin extension (X.csv -> X/)."""
+    global ACTIVE_FOLDER, ACTIVE_IMG_INDEX
+    folder = csv_key[:-4] if csv_key.lower().endswith('.csv') else csv_key
+    ACTIVE_FOLDER = folder
+    ACTIVE_IMG_INDEX = {}
+    if obs_files is None:
+        return
+    try:
+        ACTIVE_IMG_INDEX = obs_files.list_image_index(folder)
+        print(f"[img] lista='{folder}' imagenes={len(ACTIVE_IMG_INDEX)}")
+    except Exception as e:
+        print("WARN indice de imagenes:", e)
+
+
+# Inicializa el indice para la lista por defecto (best-effort).
+try:
+    _set_active_folder(os.environ.get('OBS_CSV_KEY', 'data_en.csv'))
+except Exception as _e:
+    print("WARN init folder:", _e)
 
 
 # ----------------------------------------------------------------------------
@@ -52,7 +79,8 @@ def file_picker():
     if keys:
         items = "".join(
             f'<li><a class="file" href="/select?key={html.escape(k)}">'
-            f'<span class="ico">📄</span>{html.escape(k)}</a></li>'
+            f'<span class="ico">📄</span><span class="nm">{html.escape(k)}</span>'
+            f'<span class="go">▶</span></a></li>'
             for k in keys
         )
     else:
@@ -70,21 +98,24 @@ def file_picker():
   :root {{ --navy:#1F3864; --teal:#2f7d8c; --bg:#f4f6f9; }}
   * {{ box-sizing:border-box; }}
   body {{ font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-          background:var(--bg); color:#1b1f24; margin:0; padding:40px 16px; }}
+          background:var(--bg); color:#1b1f24; margin:0; padding:clamp(20px,5vw,48px) 16px; }}
   .wrap {{ max-width:680px; margin:0 auto; }}
-  h1 {{ font-size:1.7rem; margin:0 0 4px; color:#111; }}
-  .sub {{ color:#5b6573; margin:0 0 24px; }}
+  h1 {{ font-size:clamp(1.4rem,5vw,1.9rem); margin:0 0 4px; color:#111; }}
+  .sub {{ color:#5b6573; margin:0 0 24px; font-size:clamp(.95rem,3vw,1.05rem); }}
   .sub b {{ color:var(--navy); }}
   ul {{ list-style:none; padding:0; margin:0; background:#fff; border-radius:14px;
         box-shadow:0 6px 24px rgba(20,30,60,.08); overflow:hidden; }}
   li + li {{ border-top:1px solid #eef1f5; }}
-  a.file {{ display:flex; align-items:center; gap:12px; padding:16px 20px;
-            text-decoration:none; color:#1b1f24; font-size:1.05rem; }}
+  a.file {{ display:flex; align-items:center; gap:12px; padding:16px 18px;
+            text-decoration:none; color:#1b1f24; font-size:clamp(1rem,3.4vw,1.1rem); }}
   a.file:hover {{ background:#eef4ff; color:var(--navy); }}
+  a.file .nm {{ flex:1 1 auto; overflow-wrap:anywhere; }}
+  a.file .go {{ color:#9aa4b2; }}
+  a.file:hover .go {{ color:var(--teal); }}
   .ico {{ font-size:1.2rem; }}
   .empty {{ padding:18px 20px; color:#8a93a0; }}
   .err {{ background:#fdecec; color:#b3261e; padding:12px 16px; border-radius:10px; }}
-  footer {{ margin-top:22px; color:#8a93a0; font-size:.85rem; }}
+  footer {{ margin-top:22px; color:#8a93a0; font-size:.85rem; line-height:1.5; }}
 </style>
 </head>
 <body>
@@ -93,14 +124,16 @@ def file_picker():
     <p class="sub">Elige un set de práctica del bucket <b>{bucket}</b>:</p>
     {err_html}
     <ul>{items}</ul>
-    <footer>El archivo elegido se carga como lista de palabras. Edita o sube más .csv al OBS y vuelve aquí.</footer>
+    <footer>Cada lista <b>X.csv</b> puede tener una carpeta <b>X/</b> con imágenes de las palabras
+    (ej. <code>X/Kubernetes.png</code>); si existe, se muestra junto a la palabra. Sube o edita
+    archivos en el OBS y vuelve aquí.</footer>
   </div>
 </body>
 </html>"""
 
 
 # ----------------------------------------------------------------------------
-#  "/select?key=..."  -> descarga el CSV elegido, recarga el dataset y va al trainer
+#  "/select?key=..."  -> descarga el CSV, recarga dataset + indice de imagenes
 # ----------------------------------------------------------------------------
 @app.route(rootPath + '/select')
 def select_file():
@@ -112,10 +145,33 @@ def select_file():
     try:
         obs_files.download_to(key, CSV_DEST)
         _reload_en_dataset()
+        _set_active_folder(key)
     except Exception as e:
         return (f"<p>Error cargando <b>{html.escape(key)}</b>: "
                 f"{html.escape(str(e))}</p><p><a href='/'>← Volver</a></p>"), 500
     return redirect('/trainer')
+
+
+# ----------------------------------------------------------------------------
+#  "/wordImage?word=..."  -> imagen de la palabra (o 404 si no existe)
+# ----------------------------------------------------------------------------
+@app.route(rootPath + '/wordImage')
+def word_image():
+    if obs_files is None:
+        abort(404)
+    word = request.args.get('word', '')
+    norm = obs_files.normalize(word)
+    if not norm:
+        abort(404)
+    key = ACTIVE_IMG_INDEX.get(norm)
+    if not key:
+        abort(404)
+    try:
+        data, ctype = obs_files.get_object(key)
+    except Exception:
+        abort(404)
+    return Response(data, mimetype=ctype,
+                    headers={'Cache-Control': 'public, max-age=86400'})
 
 
 # ----------------------------------------------------------------------------

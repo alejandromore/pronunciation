@@ -24,7 +24,7 @@ RUN git clone --depth 1 https://github.com/Thiagohgl/ai-pronunciation-trainer .
 #  Subir el volumen del audio de referencia (TTS): 0.2 -> 0.8.
 #  Voz en MOVIL: las voces TTS cargan async; reintentar al pulsar play y
 #  re-seleccionar voz con onvoiceschanged.
-#  El responsive de movil se aplica con mobile.css (ver mas abajo).
+#  Responsive (app.css) y mejoras didacticas (enhance.js) se anexan mas abajo.
 RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default English/' static/javascript/callbacks.js \
     && sed -i 's#>German</button>#>English</button>#' templates/main.html \
     && sed -i "s#onclick=\"history.go(0)\"#onclick=\"window.location.href='/'\"#" templates/main.html \
@@ -32,14 +32,19 @@ RUN sed -i 's/^let AILanguage = "de";.*/let AILanguage = "en"; \/\/ Default Engl
     && sed -i 's#if (languageFound) {#if (!languageFound || voice_synth == null) { try { changeLanguage(AILanguage); } catch (e) {} }\n    if (languageFound) {#' static/javascript/callbacks.js \
     && printf '\n// Movil: las voces TTS cargan async; re-seleccionar voz al estar listas.\ntry { if (window.speechSynthesis) { window.speechSynthesis.onvoiceschanged = function(){ try { changeLanguage(AILanguage); } catch(e){} }; } } catch(e){}\n' >> static/javascript/callbacks.js
 
-# Responsive movil: anexar mobile.css al final del CSS del upstream (gana en cascada).
-COPY mobile.css /tmp/mobile.css
-RUN cat /tmp/mobile.css >> static/css/style-new.css
+# Mejoras didacticas (imagen de palabra + leyenda): anexa enhance.js a callbacks.js
+COPY enhance.js /tmp/enhance.js
+RUN cat /tmp/enhance.js >> static/javascript/callbacks.js
 
-# Selector de archivos OBS:
-#  - "/"        lista los .csv del bucket (via agency)
-#  - "/select"  descarga el elegido, recarga el dataset y va a "/trainer"
-#  - "/trainer" la app de pronunciacion
+# Responsive: anexa app.css al final del CSS del upstream (gana en cascada).
+COPY app.css /tmp/app.css
+RUN cat /tmp/app.css >> static/css/style-new.css
+
+# Selector de archivos OBS + imagenes por palabra:
+#  - "/"          lista los .csv de la raiz del bucket (via agency)
+#  - "/select"    descarga el .csv, recarga dataset + indice de imagenes, va a "/trainer"
+#  - "/wordImage" sirve la imagen de la palabra (carpeta con el nombre de la lista)
+#  - "/trainer"   la app de pronunciacion
 COPY webApp.py /app/webApp.py
 COPY obs_files.py /app/obs_files.py
 

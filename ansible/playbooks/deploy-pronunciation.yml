@@ -37,7 +37,7 @@
 
     # --- Registro de imagenes (SWR) ---
     swr_registry_host: swr.la-south-2.myhuaweicloud.com
-    swr_namespace: "swr-{{ app_env }}"
+    swr_namespace: "swr-common"
     trainer_version: "1.0"
 
     # --- Credenciales SWR desde el entorno (Jenkins withCredentials) ---

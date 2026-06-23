@@ -43,7 +43,7 @@ internet, asi que **tampoco hace falta NAT**.
 cd images
 .\images-to-swr.ps1 -SwrUser "la-south-2@<AK>" -SwrPassword "<TOKEN>"
 ```
-Publica `swr.la-south-2.myhuaweicloud.com/swr-pronunciation/pronunciation-trainer:1.0`.
+Publica `swr.la-south-2.myhuaweicloud.com/swr-common/pronunciation-trainer:1.0`.
 
 ## 2) Jenkins
 

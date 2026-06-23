@@ -1,0 +1,245 @@
+
+/* ===========================================================================
+   app.css — Rediseno FULLY RESPONSIVE (se anexa al final de style-new.css)
+   Convierte el layout absoluto/fijo del upstream en un flujo flex con clamp(),
+   asi escala suave en cualquier pantalla (telefono -> desktop) sin recortes.
+   Incluye estilos de la imagen de palabra (#word_image) y la leyenda didactica.
+   =========================================================================== */
+
+/* ---- Base ---------------------------------------------------------------- */
+body {
+    max-width: 100% !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 12px 32px !important;
+    background: #f2f2f2 !important;
+}
+
+/* Contenedor principal: columna centrada y con ancho maximo comodo */
+body > div:first-of-type {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    max-width: 980px !important;
+    margin: 0 auto !important;
+}
+
+/* Anula el espaciador fijo de 200px del upstream (solo hace falta en absoluto) */
+div[style*="200px"] { display: none !important; }
+
+/* ---- Encabezado ---------------------------------------------------------- */
+#main_title {
+    font-size: clamp(1.4rem, 5.5vw, 2.4rem) !important;
+    margin: 6px 0 !important;
+}
+.icon-text-home { font-size: clamp(1.8rem, 7vw, 2.6rem) !important; }
+
+/* Idioma / Score: en flujo, sin desplazamientos negativos */
+.expanded { margin: 0 !important; }
+.accuracy-text { left: 0 !important; margin-left: 4px !important; font-size: clamp(1rem, 4vw, 1.6rem) !important; }
+
+/* ---- Tarjeta (card) como fila flexible ----------------------------------- */
+.container {
+    position: relative !important;
+    left: auto !important; top: auto !important; right: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: clamp(200px, 40vh, 320px) !important;
+    margin: 12px 0 !important;
+    padding: clamp(12px, 3vw, 22px) !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    gap: clamp(8px, 2vw, 18px) !important;
+}
+
+/* Columna izquierda: play / escuchar / % apilados y centrados */
+.container > .horizontal-flexbox {
+    position: static !important;
+    top: auto !important; left: auto !important;
+    width: auto !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: clamp(8px, 2vw, 14px) !important;
+}
+.container > .horizontal-flexbox > * {
+    position: static !important;
+    top: auto !important; left: auto !important;
+    margin: 0 !important;
+}
+
+/* Botones redondos (play / escuchar): tamano fluido y icono centrado */
+.round-button {
+    width: clamp(2.6em, 9vw, 3.2em) !important;
+    height: clamp(2.6em, 9vw, 3.2em) !important;
+    font-size: clamp(15px, 4.4vw, 20px) !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.icon-text { font-size: 1.5em !important; }
+
+/* % de score, debajo de los botones */
+#pronunciation_accuracy {
+    position: static !important;
+    width: auto !important;
+    text-align: center !important;
+    font-size: clamp(1rem, 4vw, 1.4rem) !important;
+    margin: 0 !important;
+}
+
+/* ---- Area de texto + imagen de palabra ----------------------------------- */
+#text-area.main-text-div {
+    position: static !important;
+    left: auto !important; right: auto !important; top: auto !important; bottom: auto !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+}
+.main-text {
+    font-size: clamp(1.3rem, 5.2vw, 2.4rem) !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.22;
+}
+.ipa-text {
+    font-size: clamp(0.95rem, 3.4vw, 1.6rem) !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+/* Imagen didactica de la palabra (insertada por enhance.js) */
+#word_image {
+    display: none;
+    max-width: 100%;
+    max-height: clamp(120px, 26vh, 240px);
+    width: auto;
+    margin: 0 auto 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(20,30,60,.12);
+    object-fit: contain;
+}
+
+/* ---- Boton "Next" (barra vertical a la derecha del card) ----------------- */
+#nextButtonDiv {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+}
+.button-next {
+    position: static !important;
+    top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+    width: clamp(2em, 7vw, 2.6em) !important;
+    height: auto !important;
+    min-height: 100% !important;
+    align-self: stretch !important;
+    border-radius: 12px !important;
+    font-size: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.button-next::after {
+    content: '\276F';
+    color: #fff;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+}
+
+/* ---- "Reference | Spoken" (par IPA por palabra) -------------------------- */
+.container-small {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 8px 0 !important;
+    padding: 8px 12px !important;
+}
+.ipa-text-small { font-size: clamp(.9rem, 3.2vw, 1.3rem) !important; }
+
+/* ---- Microfono ----------------------------------------------------------- */
+.mic-button-div {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    margin: 14px 0 !important;
+}
+.round-button-mic {
+    width: clamp(3.4em, 14vw, 4.6em) !important;
+    height: clamp(3.4em, 14vw, 4.6em) !important;
+    left: auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.icon-text-mic { font-size: clamp(1.8em, 6vw, 2.6em) !important; }
+
+/* ---- Dificultad (Random / Easy / Medium / Hard) -------------------------- */
+#radio-difficulty.radio {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    display: inline-flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    margin: 4px auto 10px !important;
+}
+
+/* ---- Creditos + redes (en flujo, centrados) ------------------------------ */
+.credits-icon-div {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    text-align: center !important;
+    margin: 10px 0 2px !important;
+}
+.link-icon-div {
+    position: static !important;
+    left: auto !important; top: auto !important;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 18px !important;
+    margin: 0 0 8px !important;
+}
+.svg-icon { width: 30px !important; height: 30px !important; padding-top: 0 !important; }
+
+/* ---- Leyenda didactica (insertada por enhance.js) ------------------------ */
+#didactic-legend {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 8px 16px !important;
+    margin: 4px auto 10px !important;
+    font-size: clamp(.78rem, 2.8vw, .95rem) !important;
+    color: #555 !important;
+}
+#didactic-legend .lg { white-space: nowrap; }
+#didactic-legend b { font-weight: 700; }
+#didactic-legend .ok  { color: #2e7d32; }
+#didactic-legend .bad { color: #c62828; }
+#didactic-legend .ref { color: #777; }
+#didactic-legend .you { color: #1565c0; }
+
+/* ---- Ajustes para pantallas muy angostas --------------------------------- */
+@media only screen and (max-width: 420px) {
+    .container { gap: 6px !important; padding: 10px !important; }
+    .button-next { width: 1.8em !important; }
+    .round-button { border-width: 4px !important; }
+}
